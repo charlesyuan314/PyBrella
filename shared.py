@@ -239,7 +239,7 @@ def splitMap(f, X, n=(cpu_count() / 2)):
 
 
 def log(message, toFile=False):
-    """Log a message."""
+    """Log a message. toFile is ignored."""
     if toFile:
         pass
     sys.stderr.write(message)
