@@ -75,7 +75,7 @@ sys.stderr.write("\n")
 sys.stderr.write("Creating meta.dat.\n")
 for dist in dists:
     distFileNames.append("dist_vs_t_" + dist)
-    distRst = open("%s/%s/0/dist.rst" % (UMBRELLAPATH, dist), 'r')
+    distRst = open("%s/%s/0/dist.rst" % (UMBRELLAPATH, dist))
     for line in distRst:
         minPotentials.append(float(line.split()[4][3:-1]))
 os.chdir(OUTPATH)

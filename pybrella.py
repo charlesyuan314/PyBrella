@@ -30,7 +30,8 @@ __status__ = "Development"
 
 def log(message, toFile=True):
     """Log a message, optionally to the args.log file."""
-    sys.stderr.write(message)
+    sys.stdout.write(message)
+    sys.stdout.flush()
     if toFile:
         try:
             if args.log is not None:
@@ -390,7 +391,7 @@ def init():
     else:
         dists = frange(STARTDIST, STARTDIST + MAXDIST + INCRDIST, INCRDIST)
     if dists:
-        with open(DISTPATH, 'r') as dist_vs_t:
+        with open(DISTPATH) as dist_vs_t:
             frames = dist_vs_t.read().splitlines()
         start = 0
         for dist in dists:
@@ -410,9 +411,9 @@ def determineRestraint():
     global PRMTOPPATH
     global COORDPATH
 
-    with open(COORDPATH + "/initial.pdb", 'r') as p:
+    with open(COORDPATH + "/initial.pdb") as p:
         LIGANDATOM, PROTEINATOM, ligandAtomCoord, proteinAtomCoord, ligandCenter, proteinCenter = \
-            calcCenterAtoms(p.readlines())
+            calcCenterAtoms(list(p))
     log("Selected ligand center atom ID " + MAGENTA + "%i" % LIGANDATOM + END +
         " at (%.3f, %.3f, %.3f), " % (ligandAtomCoord[0], ligandAtomCoord[1], ligandAtomCoord[2]) +
         "closest to (%.3f, %.3f, %.3f).\n" % (ligandCenter[0], ligandCenter[1], ligandCenter[2]))
@@ -431,8 +432,8 @@ def calcInitDist():
     global LIGANDATOM
     if not RUNANALYSIS:
         log("Calculating initial distance.\n")
-        with open(COORDPATH + "/initial.pdb", 'r') as pdb:
-            STARTDIST = atomDist(pdb.readlines(), LIGANDATOM, PROTEINATOM)
+        with open(COORDPATH + "/initial.pdb") as pdb:
+            STARTDIST = atomDist(list(pdb), LIGANDATOM, PROTEINATOM)
     else:  # analysis
         STARTDIST = min([float(name.split('/')[-1]) for name in glob("%s/*.*" % WORKDIR)
                          if os.path.isdir(os.path.join(WORKDIR, name))])
@@ -789,7 +790,7 @@ def analysis():
 
     log(GREEN + "\nBurst analysis complete. Starting total of %i runs.\n" % len(startPositions) + END)
     if len(startPositions) > 0:
-        with open(DISTPATH, 'r') as dist_vs_t:
+        with open(DISTPATH) as dist_vs_t:
             frames = dist_vs_t.read().splitlines()
         start = 0
         for position in startPositions:
@@ -820,7 +821,7 @@ def checkFinishedRuns():
 
     for runPath in [name for name in glob("*.*/*") if os.path.isdir(os.path.join(WORKDIR, name))]:  # Each run
         if glob(runPath + "/PB*o*"):
-            output = open(glob(runPath + "/PB*o*")[0], 'r').read()
+            output = open(glob(runPath + "/PB*o*")[0]).read()
             if "unspecified launch failure" in output or "busy or unavailable" in output:
                 # Try it again, since velocities will be regenerated
                 retry(runPath)
@@ -861,8 +862,8 @@ def eventLoop():
         else:
             for i in xrange(PAUSE):
                 time = (PAUSE - i)
-                log((BOLD + "\rWill check again in " + MAGENTA + "%i" % time + END + BOLD +
-                     " second" + ("s." if time > 1 else ".")).ljust(getTerminalWidth()) + END, toFile=False)
+                sys.stderr.write((BOLD + "\rWill check again in " + MAGENTA + "%i" % time + END + BOLD +
+                                 " second" + ("s." if time > 1 else ".")).ljust(getTerminalWidth()) + END)
                 sleep(1)
             log("\r")
 
