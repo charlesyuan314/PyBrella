@@ -2,9 +2,8 @@
 # atom_tools.py
 # Collection of PDB and atom/protein related functions
 
-from numpy import linalg, array, dot, transpose, zeros
+from numpy import linalg, array, dot, transpose, zeros, sum, sqrt
 from shared import *
-import math
 
 __author__ = 'Charles Yuan'
 
@@ -196,7 +195,7 @@ def rmsdDist(pdbLines, refCoords, segments=None):
             r = 0.0
             for v, w in zip(x, y):
                 r += sum([(v[k] - w[k]) ** 2.0 for k in range(D)])
-            return math.sqrt(r / N)
+            return sqrt(r / N)
         # Calculate RMSD for centered sets; just subtract the centroids for P and Q
         # noinspection PyTypeChecker
         return kabsch_rmsd(P - sum(P) / len(P), Q - sum(Q) / len(Q))
