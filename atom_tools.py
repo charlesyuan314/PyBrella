@@ -2,7 +2,8 @@
 # atom_tools.py
 # Collection of PDB and atom/protein related functions
 
-from numpy import linalg, array, dot, transpose, zeros, sum, sqrt
+from numpy import array, dot, transpose, zeros, sum, sqrt
+from numpy.linalg import svd, det
 from shared import *
 
 __author__ = 'Charles Yuan'
@@ -17,11 +18,11 @@ def atomDist(pdbLines, atom1, atom2):
         if pdbLine.split()[0] == "ATOM":
             atomID = int(pdbLine.split()[1])
             if atomID == int(atom1):
-                coord1 = [float(pdbLine[(30 + i * 8):(38 + i * 8)]) for i in range(3)]
+                coord1 = array([float(pdbLine[(30 + i * 8):(38 + i * 8)]) for i in range(3)])
             elif atomID == int(atom2):
-                coord2 = [float(pdbLine[(30 + i * 8):(38 + i * 8)]) for i in range(3)]
-
-    return linalg.norm(abs(array(coord1) - array(coord2)))  # vector distance
+                coord2 = array([float(pdbLine[(30 + i * 8):(38 + i * 8)]) for i in range(3)])
+    diff = coord1 - coord2
+    return sqrt(dot(diff, diff))  # vector distance
 
 
 def calcCenter(pdbLines):
@@ -122,8 +123,8 @@ def calcCenter(pdbLines):
                 atom_type = l[12:14].strip()
 
         # Append the atom mass
-        if atom_type not in ATOM_WEIGHTS:
-            masses.append(12)
+        if atom_type == "C" or atom_type not in ATOM_WEIGHTS:
+            masses.append(12.0107)
         else:
             masses.append(ATOM_WEIGHTS[atom_type])
 
@@ -131,7 +132,7 @@ def calcCenter(pdbLines):
 
     total_mass = sum(masses)
     weights = [m / total_mass for m in masses]
-    center = [sum([coord[i][j] * weights[i] for i in range(num_atoms)]) for j in range(3)]
+    center = array([sum([coord[i][j] * weights[i] for i in range(num_atoms)]) for j in range(3)])
 
     return center
 
@@ -147,10 +148,8 @@ def calcCenterAtoms(pdbLines):
             pPDB.append(line)
         elif line[17:20] != "WAT":
             lPDB.append(line)
-    log(str(pPDB))
-    log(str(lPDB))
-    pCenter = array(calcCenter(pPDB))
-    lCenter = array(calcCenter(lPDB))
+    pCenter = calcCenter(pPDB)
+    lCenter = calcCenter(lPDB)
 
     lAtom, lAtomCoord = closestAtom(lPDB, lCenter)
     pAtom, pAtomCoord = closestAtom(pPDB, pCenter)
@@ -168,9 +167,12 @@ def closestAtom(pdbLines, coords):
         if l[0:4] != "ATOM":
             continue
         # Grab coordinates
-        coord.append((int(l.split()[1]), [float(l[(30 + i * 8):(38 + i * 8)]) for i in range(3)]))
+        coord.append((int(l.split()[1]), array([float(l[(30 + i * 8):(38 + i * 8)]) for i in range(3)])))
 
-    sortedAtoms = min(coord, key=lambda c: linalg.norm(abs(c[1] - coords)))
+    def c(atom):
+        diff = atom[1] - coords
+        return sqrt(dot(diff, diff))
+    sortedAtoms = min(coord, key=c)
 
     return sortedAtoms
 
@@ -184,8 +186,8 @@ def rmsdDist(pdbLines, refCoords, segments=None):
            License at https://github.com/charnley/rmsd/blob/master/LICENSE"""
         def kabsch_rmsd(x, y):
             C = dot(transpose(x), y)
-            V, S, W = linalg.svd(C)
-            if (linalg.det(V) * linalg.det(W)) < 0.0:
+            V, S, W = svd(C)
+            if (det(V) * det(W)) < 0.0:
                 S[-1] = -S[-1]
                 V[:, -1] = -V[:, -1]
             U = dot(V, W)
@@ -215,4 +217,5 @@ def rmsdDist(pdbLines, refCoords, segments=None):
     for index, line in enumerate(processedLines):
         for j in range(3):
             coords[index, j] = float(line[(30 + j * 8):(38 + j * 8)])
+
     return rmsd(coords, refCoords)
